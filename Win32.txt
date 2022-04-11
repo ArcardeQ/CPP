@@ -1,0 +1,642 @@
+#include <windows.h>
+
+LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
+
+char szClassName[ ] = "WindowsApp";
+
+int WINAPI WinMain (HINSTANCE hThisInstance,
+                    HINSTANCE hPrevInstance,
+                    LPSTR lpszArgument,
+                    int nFunsterStil)
+{
+  HWND hwnd;
+  MSG messages;
+  WNDCLASSEX wincl;
+
+  wincl.hInstance = hThisInstance;
+  wincl.lpszClassName = szClassName;
+  wincl.lpfnWndProc = WindowProcedure;
+  wincl.style = CS_DBLCLKS;
+  wincl.cbSize = sizeof (WNDCLASSEX);
+
+  wincl.hIcon = LoadIcon (NULL, IDI_APPLICATION);
+  wincl.hIconSm = LoadIcon (NULL, IDI_APPLICATION);
+  wincl.hCursor = LoadCursor (NULL, IDC_ARROW);
+  wincl.lpszMenuName = NULL;
+  wincl.cbClsExtra = 0;
+  wincl.cbWndExtra = 0;
+  wincl.hbrBackground = (HBRUSH) COLOR_BACKGROUND;
+
+  if (!RegisterClassEx (&wincl))
+    return 0;
+
+  hwnd = CreateWindowEx (
+         0,
+         szClassName,
+         "Double Click Me!",
+         WS_OVERLAPPEDWINDOW,
+         CW_USEDEFAULT,
+         CW_USEDEFAULT,
+         544,
+         375,
+         HWND_DESKTOP,
+         NULL,
+         hThisInstance,
+         NULL
+         );
+
+  ShowWindow (hwnd, nFunsterStil);
+
+  while (GetMessage (&messages, NULL, 0, 0))
+  {
+    TranslateMessage(&messages);
+    DispatchMessage(&messages);
+  }
+  return messages.wParam;
+}
+
+LRESULT CALLBACK
+WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+  static  HDC           memdc;    // virtual device context handle
+  static  HBITMAP       hbit;     // virtual bitmap handle
+
+  switch (message)
+  {
+    case WM_CREATE:
+    {
+      /*  In WM_CREATE we set up the virtual 'canvas' that we will draw on.
+          It will consist of a device context and bitmap that are compatible
+          with the window dc. We will create a brush to paint the background
+          of the 'canvas'
+      */
+
+      // handle to save current brush
+      HGDIOBJ     oldBrush;
+
+      // get screen coordinates
+      int         maxX    = GetSystemMetrics(SM_CXSCREEN);
+      int         maxY    = GetSystemMetrics(SM_CYSCREEN);
+
+      // get handle to window dc
+      HDC         hdc     = GetDC(hwnd);
+
+      // create virtual dc and bitmap
+      memdc   = CreateCompatibleDC(hdc);
+      hbit    = CreateCompatibleBitmap(hdc, maxX, maxY);
+
+      // select bitmap into dc
+      SelectObject(memdc, hbit);
+
+      // save old brush and select new brush
+      oldBrush = SelectObject(memdc, CreateSolidBrush(RGB(255, 255, 240)));
+
+      // paint background with brush, delete brush and release dc
+      PatBlt(memdc, 0, 0, maxX, maxY, PATCOPY);
+      DeleteObject(SelectObject(memdc, oldBrush));
+      ReleaseDC(hwnd, hdc);
+
+      break;
+    }
+
+    case WM_PAINT:
+    {
+      /*  In WM_PAINT we update the screen by bitblt'ing the virtual canvas to
+          the window.
+      */
+
+      PAINTSTRUCT ps; // struct to hold screen coordinates
+      HDC         hdc = BeginPaint(hwnd, &ps); // get window dc and coords.
+
+      BitBlt(hdc, ps.rcPaint.left, ps.rcPaint.top, //copy memdc to hdc
+        ps.rcPaint.right-ps.rcPaint.left,
+        ps.rcPaint.bottom-ps.rcPaint.top,
+        memdc,
+        ps.rcPaint.left, ps.rcPaint.top,
+        SRCCOPY);
+
+      EndPaint(hwnd, &ps); // finished paint
+      break;
+    }
+
+    case WM_LBUTTONDBLCLK:
+    {
+      /*  On double click left button we will save the state of memdc,
+          create a pen and a brush, and draw a rectangle. We will call
+          InvalidateRect to force Windows to send a WM_PAINT, redrawing
+          our window with the updated canvas. Then we will restore the
+          state of memdc, and delete the pen and brush we created.
+      */
+
+      // save the current dc state
+      int     oldDC     = SaveDC(memdc);
+
+      // create pen and brush
+      HPEN    hpRed   = CreatePen(PS_SOLID, 0, RGB(255, 0, 0));
+      HBRUSH  hbBlue  = CreateSolidBrush(RGB(220, 220, 255));
+
+      // select pen and brush into memdc
+      SelectObject(memdc, hpRed);
+      SelectObject(memdc, hbBlue);
+
+      // draw rectangle, uses hpRed pen for border, hbBlue brush for filling
+      Rectangle(memdc, 50, 50, 400, 200);
+
+      // force repaint
+      InvalidateRect(hwnd, NULL, TRUE);
+
+      // clean up, restore dc, delete pen and brush
+      RestoreDC(memdc, oldDC);
+      DeleteObject(hpRed);
+      DeleteObject(hbBlue);
+
+      break;
+    }
+
+    case WM_DESTROY:
+      PostQuitMessage (0);
+      break;
+    default:
+      return DefWindowProc (hwnd, message, wParam, lParam);
+  }
+
+  return 0;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+windows.h
+Ir a la navegación
+Ir a la búsqueda
+
+
+windows.h es un archivo cabecera específico de Windows para la programación en lenguaje C/C++ que contiene las declaraciones de todas las funciones de la biblioteca Windows API, todas las macros utilizadas por los programadores de aplicaciones para Windows, y todas las estructuras de datos utilizadas en gran cantidad de funciones y subsistemas. La Win32 API puede agregarse en proyectos de programación en C haciendo la inclusión de la cabecera <windows.h>
+Índice
+
+    1 Archivos de cabeceras incluidos
+        1.1 Otras inclusiones
+        1.2 OLE y COM
+    2 Macros
+    3 Ejemplo en lenguaje C
+    4 Enlaces externos
+
+Archivos de cabeceras incluidos
+
+windows.h incluye automáticamente gran cantidad de otras cabeceras. Muchas de ellas no pueden incluirse por sí mismas, por una cuestión de dependencias.
+
+windows.h incluye los siguientes archivos cabeceras:
+
+    excpt.h – manejo de excepciones
+    stdarg.h – funciones de variable-argumento (cabecera estándar de C)
+    windef.h – varios macros y tipos
+    winnt.h – varios macros y tipos (para Windows NT)
+    basetsd.h – varios tipos
+    guiddef.h – el tipo GUID
+    ctype.h – clasificación de caracteres (cabecera estándar de C)
+    string.h – cadenas y búferes(cabecera estándar de C)
+    winbase.h – kernel32.dll: servicios del núcleo del sistema operativo; advapi32.dll:servicios del núcleo(ej. función CreateProcessAsUser), control de acceso(ej. función AdjustTokenGroups).
+    winerror.h – códigos de error de Windows.
+    wingdi.h – GDI (Graphics Device Interface, en español, interfaz del dispositivo gráfico)
+    winuser.h – user32.dll: servicios de usuario
+    winnls.h – NLS (Native Language Support, en español, soporte de lenguaje nativo)
+    wincon.h – servicios de consola de comandos
+    winver.h – información de versión
+    winreg.h – Registro de Windows
+    winnetwk.h – WNet (Windows Networking: Red en Windows)
+    winsvc.h – Servicios de Windows y SCM (Service Control Manager: Administrador de Control de Servicios)
+    imm.h – IME (Input Method Editor)
+
+Otras inclusiones
+
+    cderr.h – CommDlgExtendedError códigos de error de funciones
+    commdlg.h – Common Dialog Boxes
+    dde.h – DDE (Dynamic Data Exchange)
+    ddeml.h – Administrador de la biblioteca de DDE
+    dlgs.h – constantes para Common Dialog Boxes
+    lzexpand.h – LZ (Lempel-Ziv) compresión/descompresión
+    mmsystem.h – Multimedia en Windows
+    nb30.h – NetBIOS
+    rpc.h – RPC
+    shellapi.h – Windows Shell API
+    wincrypt.h – API de criptografía
+    winperf.h – Monitoreo de rendimiento
+    winresrc.h – usada en Recursos de Windows
+    winsock.h – Winsock (Windows Sockets), version 1.1
+    winspool.h – Print Spooler
+    winbgim.h – Biblioteca gráfica estándar
+
+OLE y COM
+
+    ole2.h – OLE (Object Linking and Embedding)
+    objbase.h – COM (Component Object Model)
+    oleauto.h – OLE Automation
+    olectlid.h – varias definiciones de GUID
+
+Macros
+
+Varias macros para el funcionamiento de windows.h.
+Ejemplo en lenguaje C
+
+Véase Windows Programming: Window Creation.
+
+#include <windows.h>
+#include <stdio.h>
+
+LPSTR szClassName = "MiClase";
+HINSTANCE hInstance;
+LRESULT CALLBACK MyWndProc(HWND, UINT, WPARAM, LPARAM);
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR szCmdLine, int iCmdShow)
+{
+   WNDCLASS wnd;
+   MSG msg;
+   HWND hwnd;
+
+   hInstance = hInst;
+
+   wnd.style = CS_HREDRAW | CS_VREDRAW;
+   wnd.lpfnWndProc = MyWndProc;
+   wnd.cbClsExtra = 0;
+   wnd.cbWndExtra = 0;
+   wnd.hInstance = hInstance;
+   wnd.hIcon = LoadIcon(NULL, IDI_APPLICATION); //icono por defecto
+   wnd.hCursor = LoadCursor(NULL, IDC_ARROW);   //flecha de mouse por defecto
+   wnd.hbrBackground = (HBRUSH)(COLOR_BACKGROUND+1);
+   wnd.lpszMenuName = NULL;                     //sin menu
+   wnd.lpszClassName = szClassName;
+
+   if(!RegisterClass(&wnd))                     //registrando WNDCLASS
+   {
+       printf("Este programa requiere Windows\n");
+       return 0;
+   }
+
+   hwnd = CreateWindow(szClassName,
+                       "Titulo de la ventana",
+                       WS_OVERLAPPEDWINDOW,
+                       CW_USEDEFAULT, CW_USEDEFAULT,
+                       CW_USEDEFAULT, CW_USEDEFAULT,
+                       NULL, NULL,
+                       hInstance, NULL);
+   ShowWindow(hwnd, iCmdShow);              //muestra la ventana en la pantalla
+   UpdateWindow(hwnd);             //se actualiza la ventana
+
+   while(GetMessage(&msg, NULL, 0, 0))      //ciclo de mensajes
+   {
+       TranslateMessage(&msg);
+       DispatchMessage(&msg);
+   }
+   return msg.wParam;
+}
+
+LRESULT CALLBACK MyWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+   switch(msg)
+   {
+       case WM_DESTROY:
+           PostQuitMessage(0);
+           return 0;
+   }
+   return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+
+
+
+
+
+
+
+
+
+
+
+Haciendo botones en C++ con Winapi
+Creando botones con Winapi para C++, detectamos eventos e incluye ejemplos.
+
+En la lección anterior a la que puede acceder desde el enlace ubicado debajo de este artículo, ya estuvimos hablando de cómo crear una ventana en C++, para esto estamos utilizando la librería grafica Winapi por ser la más versátil que existe al ser la oficial de Windows y en la cual se basan muchas de las otras librerías.
+
+En esta lección les mostrare como crear botones, asunto que por cierto es mucho más sencillo que crear la más sencilla de las ventanas en Winapi (por extraño que parezca), pero también estaremos modificando dichos botones con lo cual el código se irá haciendo cada vez más complejo, primero hagamos (nuevamente) una ventana básica para ya luego añadirle algún botón.
+
+Código para la ventana básica en C++
+
+
+#define _WIN32_WINNT 0x0500 // Es necesaria esta definición para esconder ventana de consola
+
+#include <windows.h> // Librería que contiene las funciones de Winapi
+
+/*  Declaracion del procedimiento de windows  */
+
+LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
+
+
+
+/*  Declaramos una variable de tipo char para guardar el nombre de nuestra aplicación  */
+
+char NombreClase[] = "Estilos";
+
+HWND ventana1;           /* Manejador de la ventana*/
+
+MSG mensajecomunica;     /* Mensajes internos que se envían a la aplicación */
+
+WNDCLASSEX estilo1;      /* Nombre de la clase para los estilos de ventana */
+
+
+
+int WINAPI WinMain (HINSTANCE hThisInstance,
+
+                     HINSTANCE hPrevInstance,
+
+                     LPSTR lpszArgument,
+
+                     int nCmdShow)
+
+{
+
+    /* Creamos la estructura de la ventana indicando varias características */
+
+    estilo1.hInstance = hThisInstance;
+
+    estilo1.lpszClassName = NombreClase;
+
+    estilo1.lpfnWndProc = WindowProcedure;
+
+    estilo1.style = CS_DBLCLKS;
+
+    estilo1.cbSize = sizeof (WNDCLASSEX);
+
+    estilo1.hIcon = LoadIcon (NULL, IDI_QUESTION);
+
+    estilo1.hIconSm = LoadIcon (NULL, IDI_INFORMATION);
+
+    estilo1.hCursor = LoadCursor (NULL, IDC_ARROW);
+
+    estilo1.lpszMenuName = NULL;   /* Sin Menu */
+
+    estilo1.cbClsExtra = 0;
+
+    estilo1.cbWndExtra = 0;
+
+    estilo1.hbrBackground = (HBRUSH) COLOR_WINDOW; /* Color del fondo de ventana */
+
+
+
+    /* Registramos la clase de la ventana */
+
+    if (!RegisterClassEx (&estilo1))
+
+        return 0;
+
+
+
+    /* Ahora creamos la ventana a partir de la clase anterior */
+
+    ventana1 = CreateWindowEx (
+
+           0,
+
+           NombreClase,         /* Nombre de la clase */
+
+           ("Ventana Codigazo"),       /* Titulo de la ventana */
+
+           WS_OVERLAPPEDWINDOW|WS_BORDER, /* Ventana por defecto */
+
+           400,       /* Posicion de la ventana en el eje X (de izquierda a derecha) */
+
+           70,       /* Posicion de la ventana, eje Y (arriba abajo) */
+
+           644,                 /* Ancho de la ventana */
+
+           575,                 /* Alto de la ventana */
+
+           HWND_DESKTOP,
+
+           NULL,                /* Sin menu */
+
+           hThisInstance,
+
+           NULL
+
+           );
+
+
+
+    /* Hacemos que la ventana sea visible */
+
+    ShowWindow (ventana1, nCmdShow);
+
+    ShowWindow(GetConsoleWindow(), SW_HIDE ); // Función para esconder la ventana de consola
+
+
+
+    /* Hacemos que la ventana se ejecute hasta que se obtenga resturn 0 */
+
+    while (GetMessage (&mensajecomunica, NULL, 0, 0))
+
+    {
+
+        /* Traduce mensajes virtual-key */
+
+        TranslateMessage(&mensajecomunica);
+
+        /* Envia mensajes a WindowProcedure */
+
+        DispatchMessage(&mensajecomunica);
+
+    }
+
+
+
+    return mensajecomunica.wParam;
+
+}
+
+
+
+LRESULT CALLBACK WindowProcedure (HWND ventana1, UINT mensajecomunica, WPARAM wParam, LPARAM lParam)
+
+{
+
+    switch (mensajecomunica) /* Manejamos los mensajes */
+
+    {
+
+        case WM_CLOSE: /* Que hacer en caso de recibir el mensaje WM_CLOSE*/
+
+        DestroyWindow(ventana1); /* Destruir la ventana */
+
+             break;
+
+        case WM_DESTROY:
+
+        PostQuitMessage(0);
+
+            break;
+
+        default:  /* Tratamiento por defecto para mensajes que no especificamos */
+
+            return DefWindowProc (ventana1, mensajecomunica, wParam, lParam);
+
+    }
+
+return 0;
+
+}
+
+
+
+Una ventana simple para añadirle botones luego
+
+Recuerde que estos códigos no dependen de su IDE, pueden ser ejecutados en Dev-C++, Codeblocks, Visual studio y cualquier otro IDE para C++. Pasemos ahora a crear el primer botón, para cada botón necesitamos registrar una variable que viene a ser el identificador de nuestro botón, estas variables son de tipo HWND, y significa handler window.
+
+HWND boton1; // Coloque esta variable debajo de la variable HWND ventana1.
+
+
+
+También colocaremos un identificador para el menú al que pertenecerá nuestro botón, este identificador es necesario para detectar eventos dentro de nuestro botón, nada más tenemos que colocar debajo de "#include <windows.h>" el codigo "#define ID1 100" todo identificador se le añade un número, se recomienda que sea mayor a 100 para que no exista conflicto entre identificadores del sistema.
+
+ahora vamos a crear debajo del "break;" del caso "WM_DESTROY:" ubicado dentro del mensajecomunica, un nuevo caso, este va a ser:
+
+case WM_CREATE:
+
+break;
+
+
+
+Luego podemos crear el botón con ayuda de la funcion CreateWindowEx, colocando en el segundo parámetro "button", este botón va debajo de "WM_CREATE:" y antes del "break;" veamos un ejemplo.
+
+boton1 = CreateWindowEx(0, "button", ("Texto"), WS_VISIBLE | WS_CHILD | 0x00000001, 10, 10, 80, 25, ventana1, (HMENU)ID1, GetModuleHandle(NULL), 0);
+
+
+
+Nuestro primer boton en Winapi
+
+Le recomiendo que pruebe cambiando algunos de estos parámetros, principalmente con los números 110,40,80 y 25, de esta forma entenderá para que sirve cada uno de ellos, los otros parámetros no los cambie porque en su mayoría han de quedarse como están para funcionar.
+
+Detectar clic en botón Winapi
+
+
+Para manejar los clics que el usuario da sobre el botón se necesita crear otro case, quizá ya se va dando cuenta que todo tipo de actividad dentro de Winapi se maneja por cases, este case lo podemos crear debajo del anterior y se llamará:
+
+case WM_COMMAND:
+
+break;
+
+
+
+El caso anterior lo que hace es detectar varios tipos de comandos que se envían a la ventana y los clics son precisamente un comando, este WM_COMMAND no pertenece al botón como en otros lenguajes, sino que pertenece y es manejado por la ventana, ahora tenemos que detectar en cual botón se ha realizado esta acción, esto con ayuda del identificador ID1, para eso lo habíamos creado, para probar botones es practico crear un MessageBox(esas ventanitas de alerta que tienen un botón de Aceptar, todo esto lo hacemos colocando dentro de WM_COMMAND lo que sigue a continuación.
+
+        if (LOWORD(wParam) == ID1){
+
+        MessageBox(NULL, "Este es un mensaje de prueba, modifíquelo.", "¡Alerta Codigazo!", MB_OKCANCEL | MB_DEFBUTTON2);
+
+        }
+
+
+
+Ejemplo de detección de eventos en botones(Winapi)
+
+Hay mucho más que hacer con los botones, pero por ahora con esto es suficiente para que practiquen y así evitar que el código les parezca muy pesado o difícil.
+
+Nota 1: Para cada botón nuevo tendrá que crear una nueva variable, y un nuevo identificador, luego crear el botón siempre debajo del caso "WM_CREATE:" este caso permite que se cree el botón en el momento que se está creando la ventana.
+
+Nota 2: El botón se puede crear tambien con "CreateWindow" pero "CreateWindowEx" es la versión actualizada que incluye un par de opciones extra de hecho "Ex" pertenece a "Extendended" que significa extendido.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#include <windows.h>
+
+/* This is where all the input to the window goes to */
+LRESULT CALLBACK WndProc(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam) {
+    switch(Message) {
+
+        /* trap the WM_CLOSE (clicking X) message, and actually tell the window to close */
+        case WM_CLOSE: {
+            DestroyWindow(hwnd);
+            break;
+        }
+
+        /* Upon destruction, tell the main thread to stop */
+        case WM_DESTROY: {
+            PostQuitMessage(0);
+            break;
+        }
+
+        /* All other messages (a lot of them) are processed using default procedures */
+        default:
+            return DefWindowProc(hwnd, Message, wParam, lParam);
+    }
+    return 0;
+}
+
+/* The 'main' function of Win32 GUI programs: this is where execution starts */
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+    WNDCLASSEX wc; /* A properties struct of our window */
+    HWND hwnd; /* A 'HANDLE', hence the H, or a pointer to our window */
+    MSG Msg; /* A temporary location for all messages */
+
+    /* zero out the struct and set the stuff we want to modify */
+    memset(&wc,0,sizeof(wc));
+    wc.cbSize        = sizeof(WNDCLASSEX);
+    wc.lpfnWndProc   = WndProc; /* This is where we will send messages to */
+    wc.hInstance     = hInstance;
+    wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
+
+    /* White, COLOR_WINDOW is just a #define for a system color, try Ctrl+Clicking it */
+    wc.hbrBackground = (HBRUSH)(COLOR_WINDOW+1);
+    wc.lpszClassName = "WindowClass";
+    wc.hIcon         = LoadIcon(NULL, IDI_APPLICATION); /* Load a standard icon */
+    wc.hIconSm       = LoadIcon(NULL, IDI_APPLICATION);
+
+    if(!RegisterClassEx(&wc)) {
+        MessageBox(NULL, "Window Registration Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
+        return 0;
+    }
+
+    hwnd = CreateWindowEx(WS_EX_CLIENTEDGE,"WindowClass","C GLANCE",WS_VISIBLE|WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, /* x */
+        CW_USEDEFAULT, /* y */
+        640, /* width */
+        480, /* height */
+        NULL,NULL,hInstance,NULL);
+
+    if(hwnd == NULL) {
+        MessageBox(NULL, "Window Creation Failed!","Error!",MB_ICONEXCLAMATION|MB_OK);
+        return 0;
+    }
+
+    /*
+        This is the heart of our program where all input is processed and 
+        sent to WndProc. Note that GetMessage blocks code flow until it receives something, so
+        this loop will not produre unreasonably CPU usage
+    */
+    while(GetMessage(&Msg, NULL, 0, 0) > 0) { /* If no error is received... */
+        TranslateMessage(&Msg); /* Translate keycodes to chars if present */
+        DispatchMessage(&Msg); /* Send it to WndProc */
+    }
+    return Msg.wParam;
+}
