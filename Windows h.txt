@@ -1,0 +1,134 @@
+windows.h
+Ir a la navegación
+Ir a la búsqueda
+
+
+windows.h es un archivo cabecera específico de Windows para la programación en lenguaje C/C++ que contiene las declaraciones de todas las funciones de la biblioteca Windows API, todas las macros utilizadas por los programadores de aplicaciones para Windows, y todas las estructuras de datos utilizadas en gran cantidad de funciones y subsistemas. La Win32 API puede agregarse en proyectos de programación en C haciendo la inclusión de la cabecera <windows.h>
+Índice
+
+    1 Archivos de cabeceras incluidos
+        1.1 Otras inclusiones
+        1.2 OLE y COM
+    2 Macros
+    3 Ejemplo en lenguaje C
+    4 Enlaces externos
+
+Archivos de cabeceras incluidos
+
+windows.h incluye automáticamente gran cantidad de otras cabeceras. Muchas de ellas no pueden incluirse por sí mismas, por una cuestión de dependencias.
+
+windows.h incluye los siguientes archivos cabeceras:
+
+    excpt.h – manejo de excepciones
+    stdarg.h – funciones de variable-argumento (cabecera estándar de C)
+    windef.h – varios macros y tipos
+    winnt.h – varios macros y tipos (para Windows NT)
+    basetsd.h – varios tipos
+    guiddef.h – el tipo GUID
+    ctype.h – clasificación de caracteres (cabecera estándar de C)
+    string.h – cadenas y búferes(cabecera estándar de C)
+    winbase.h – kernel32.dll: servicios del núcleo del sistema operativo; advapi32.dll:servicios del núcleo(ej. función CreateProcessAsUser), control de acceso(ej. función AdjustTokenGroups).
+    winerror.h – códigos de error de Windows.
+    wingdi.h – GDI (Graphics Device Interface, en español, interfaz del dispositivo gráfico)
+    winuser.h – user32.dll: servicios de usuario
+    winnls.h – NLS (Native Language Support, en español, soporte de lenguaje nativo)
+    wincon.h – servicios de consola de comandos
+    winver.h – información de versión
+    winreg.h – Registro de Windows
+    winnetwk.h – WNet (Windows Networking: Red en Windows)
+    winsvc.h – Servicios de Windows y SCM (Service Control Manager: Administrador de Control de Servicios)
+    imm.h – IME (Input Method Editor)
+
+Otras inclusiones
+
+    cderr.h – CommDlgExtendedError códigos de error de funciones
+    commdlg.h – Common Dialog Boxes
+    dde.h – DDE (Dynamic Data Exchange)
+    ddeml.h – Administrador de la biblioteca de DDE
+    dlgs.h – constantes para Common Dialog Boxes
+    lzexpand.h – LZ (Lempel-Ziv) compresión/descompresión
+    mmsystem.h – Multimedia en Windows
+    nb30.h – NetBIOS
+    rpc.h – RPC
+    shellapi.h – Windows Shell API
+    wincrypt.h – API de criptografía
+    winperf.h – Monitoreo de rendimiento
+    winresrc.h – usada en Recursos de Windows
+    winsock.h – Winsock (Windows Sockets), version 1.1
+    winspool.h – Print Spooler
+    winbgim.h – Biblioteca gráfica estándar
+
+OLE y COM
+
+    ole2.h – OLE (Object Linking and Embedding)
+    objbase.h – COM (Component Object Model)
+    oleauto.h – OLE Automation
+    olectlid.h – varias definiciones de GUID
+
+Macros
+
+Varias macros para el funcionamiento de windows.h.
+Ejemplo en lenguaje C
+
+Véase Windows Programming: Window Creation.
+
+#include <windows.h>
+#include <stdio.h>
+
+LPSTR szClassName = "MiClase";
+HINSTANCE hInstance;
+LRESULT CALLBACK MyWndProc(HWND, UINT, WPARAM, LPARAM);
+
+int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInstance, LPSTR szCmdLine, int iCmdShow)
+{
+   WNDCLASS wnd;
+   MSG msg;
+   HWND hwnd;
+
+   hInstance = hInst;
+
+   wnd.style = CS_HREDRAW | CS_VREDRAW;
+   wnd.lpfnWndProc = MyWndProc;
+   wnd.cbClsExtra = 0;
+   wnd.cbWndExtra = 0;
+   wnd.hInstance = hInstance;
+   wnd.hIcon = LoadIcon(NULL, IDI_APPLICATION); //icono por defecto
+   wnd.hCursor = LoadCursor(NULL, IDC_ARROW);   //flecha de mouse por defecto
+   wnd.hbrBackground = (HBRUSH)(COLOR_BACKGROUND+1);
+   wnd.lpszMenuName = NULL;                     //sin menu
+   wnd.lpszClassName = szClassName;
+
+   if(!RegisterClass(&wnd))                     //registrando WNDCLASS
+   {
+       printf("Este programa requiere Windows\n");
+       return 0;
+   }
+
+   hwnd = CreateWindow(szClassName,
+                       "Titulo de la ventana",
+                       WS_OVERLAPPEDWINDOW,
+                       CW_USEDEFAULT, CW_USEDEFAULT,
+                       CW_USEDEFAULT, CW_USEDEFAULT,
+                       NULL, NULL,
+                       hInstance, NULL);
+   ShowWindow(hwnd, iCmdShow);              //muestra la ventana en la pantalla
+   UpdateWindow(hwnd);             //se actualiza la ventana
+
+   while(GetMessage(&msg, NULL, 0, 0))      //ciclo de mensajes
+   {
+       TranslateMessage(&msg);
+       DispatchMessage(&msg);
+   }
+   return msg.wParam;
+}
+
+LRESULT CALLBACK MyWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+   switch(msg)
+   {
+       case WM_DESTROY:
+           PostQuitMessage(0);
+           return 0;
+   }
+   return DefWindowProc(hwnd, msg, wParam, lParam);
+}
