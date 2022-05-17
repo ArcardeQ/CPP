@@ -1,0 +1,483 @@
+Bueno, pues como veo que hay dudas respecto a esto en el foro (y yo necesitaba hacerlo tambien :xD) me e decidido a compartir con vosotros un sencillo codigo que lista directorios y carpetas con las apis FindFirstFile y FindNextFile.
+Espero que os sea util ;)
+
+ACTUALIZADO Y MEJORADO:
+Código
+
+    //////////////////////////////
+    //  Listando directorios y  //
+    //  carpetas de una ruta    //
+    //  By E0N                  //
+    //////////////////////////////
+     
+    #include <iostream>
+    #include <windows.h>
+     
+    using namespace std;
+     
+     
+    void listarDirectorio(char* dir)
+    {
+        WIN32_FIND_DATA findFileData;
+        HANDLE          hFind;
+     
+        strcat (dir,"\\*");
+     
+        hFind = FindFirstFile(dir, &findFileData);
+     
+        if (hFind == INVALID_HANDLE_VALUE)
+     	    std::cout << "Ruta incorrecta";
+        else
+        {
+    	std::cout << findFileData.cFileName << '\n'; //El primer fichero
+     
+            // Listamos todos los ficheros restantes
+            while (FindNextFile(hFind, &findFileData) != 0)
+    			std::cout << findFileData.cFileName << '\n';
+        }
+    }
+     
+    void main()
+    {
+    	char* dir = new char[MAX_PATH];
+     
+            cout << "Introduzca el nombre de la ruta a explorar: ";
+            cin  >> dir;
+    	cout << "\n\n";
+     
+    	listarDirectorio(dir);
+     
+    	delete(dir);
+    }
+     
+
+
+
+Código viejo:
+#include <stdio.h>
+#include <iostream>
+#include <windows.h>
+
+#define BUFSIZE MAX_PATH
+
+void main()
+{
+   WIN32_FIND_DATA FindFileData;
+   HANDLE hFind = INVALID_HANDLE_VALUE;
+   LPSTR Dir;
+   Dir = (LPSTR) malloc (BUFSIZE);
+
+   std::cout << "Introduzca el nombre de la ruta a explorar: ";
+   std::cin >> Dir;
+   
+   strcat (Dir,"\\*"); //Le añadimos un \* al final de la ruta para que pueda listar los direcrorios bien
+
+   hFind = FindFirstFile(Dir, &FindFileData);
+
+   if (hFind == INVALID_HANDLE_VALUE)
+   {
+      std::cout << "Ruta incorrecta" << '\a';
+   }
+   else
+   {
+      std::cout << FindFileData.cFileName << '\n'; //El primer fichero
+     
+      // Listamos todos los ficheros del directorio
+      while (FindNextFile(hFind, &FindFileData) != 0) //Mientras q la funcion q lista el siguiente fichero, es decir
+                                                    //FindNextFile, no nos devuelva nulo...
+      {
+        std::cout << FindFileData.cFileName << '\n'; //...listamos el resto de ficheros y directorios
+      }
+   }
+   free(Dir);
+}
+
+
+
+
+
+
+Cómo buscar un archivo en diferentes rutas en C++
+22 febrero, 2016 Author: Gaspar Fernández
+1 Comment
+Facebook
+Twitter
+Pinterest0
+Buffer
+Flipboard
+WhatsApp
+Telegram
+Meneame
+LinkedIn
+Pocket
+Compartir
+
+photo-1442849914809-0df6c377974f_r
+
+Es algo muy común, hemos creado un software que necesita ciertos archivos para ejecutarse. El ejemplo más común es el archivo de configuración. Tenemos que cargar la configuración de nuestro programa, pero antes, tenemos que saber dónde está, y hay varias alternativas. Pero podemos utilizar el mismo programa para buscar plantillas, páginas web, archivos de datos, en fin, lo que queramos.
+
+Nota: Estos programas están hechos para Linux, aunque si queremos usarlos en Windows, bastará con cambiar la barra / por \ o tal vez queramos hacer una opción multiplataforma, pero no deberíamos tener que cambiar muchas cosas.
+
+Vamos a implementar la búsqueda de dos maneras:
+
+    Una búsqueda sencilla, en la que especificamos el archivo y las rutas donde queremos buscar y listo
+    Una búsqueda avanzada en la que especificamos una plantilla en las rutas, luego, en esas rutas se sustituirán las palabras clave por sus reemplazos y se buscará el archivo deseado
+
+Tabla de contenidos [hide]
+
+    1 Búsqueda sencilla
+    2 Rizando el rizo: plantillas de rutas
+    3 Compilando
+    4 También podría interesarte....
+
+Búsqueda sencilla
+
+En el ejemplo de mi archivo de configuración. Éste puede estar en varios sitios:
+
+    miconfig.xml
+    /etc/miprograma.xml
+    /etc/miprograma/miconfig.xml
+    /var/miprograma/miconfig.xml
+
+Lo que deberíamos hacer sería buscar en todas esas rutas (ordenadas por prioridad) y la primera que contenga el archivo de configuración válido, devolverla. Nuestro programa se encargará ya de abrir el archivo, leerlo, etc, pero eso ya es otro tema.
+
+Aquí os dejo un código de ejemplo:
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+	
+#include <list>
+#include <string>
+#include <iostream>
+#include <fstream>
+
+bool file_exists (const std::string& name)
+{
+  std::ifstream f(name.c_str());
+  return f.good();
+}
+
+bool findConfigFile(std::string &configFile)
+{
+  std::list<std::string> paths = {"miconfig.xml", "/etc/miprograma.xml", "/etc/miprograma/miconfig.xml", "/var/miprograma/miconfig.xml"};
+
+  for (auto p : paths)
+    {
+      if (file_exists(p)==1)
+    {
+      configFile = p;
+      return true;
+    }
+    }
+
+  return false;
+}
+
+int main(int argc, char *argv[])
+{
+  std::string f;
+
+  if (findConfigFile(f))
+    std::cout << "El fichero se encontró en: "<<f<<std::endl;
+  else
+    std::cout << "No se encuentra el fichero "<<std::endl;
+}
+
+Lo primero que necesitamos es una función para comprobar la existencia de un archivo, ( file_exists(), aunque si queremos velocidad, lo suyo es utilizar una versión de más bajo nivel, por ejemplo accediendo a stat(), directamente del sistema operativo, pero perdemos portabilidad, tendríamos que implementar una versión para cada sistema en el que trabajáramos (cuando llegue C++17, tal vez podremos utilizar:
+1
+	
+std::filesystem::exists(fichero);
+
+o algo parecido.
+
+Tras ello, la función findConfigFile nos devolverá un bool diciendo si ha sido capaz de encontrar el fichero o no, y almacenará la ruta completa del fichero en la variable configFile que le pasamos por referencia. Esta función recorrerá la lista completa de rutas y comprobará la existencia de las mismas, la primera que exista la devolverá, por eso debemos ordenarlas por prioridad.
+Rizando el rizo: plantillas de rutas
+
+Pero claro, no siempre es tan fácil, en ocasiones, queremos un método general que nos ayude a encontrar varios archivos en diferentes rutas y, además, que pueda buscar en rutas que no sean fijas, me refiero, sea capaz de buscar en el $HOME del usuario o que la ruta dependa de un parámetro que conoceremos en tiempo de ejecución (tal vez para buscar los archivos del tema de nuestra aplicación).
+
+Este ejemplo, no valdrá en Windows, por la búsqueda del directorio personal del usuario (si quitamos todo lo relativo al HOME, debería compilar sin problema).
+
+En este caso nuestras rutas serán:
+
+    miconfig.xml : en el directorio actual, puede ser útil mientras estamos desarrollando la aplicación.
+    $HOME/.miprograma.xml
+    $HOME/.miprograma/config.xml
+    /etc/miprograma.xml
+    /etc/miprograma/miconfig.xml
+    /var/miprograma/miconfig.xml
+
+Por otro lado, el nombre del programa y la extensión del archivo no serán fijos. Con el propósito de hacer un método general para todos nuestros programas (o, tal vez queramos configurar módulos de nuestro programa, ya podemos hacer lo que nos dé la imaginación).
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+	
+#include <list>
+#include <string>
+#include <iostream>
+#include <fstream>
+#include <map>
+/* Para ver $HOME */
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
+/* Para ver $HOME */
+
+const std::list<std::string> stdConfigPaths =
+  {
+    ":file.:cfgext",
+    ":home/.:programa.:cfgext",
+    ":home/.:programa/:file.:cfgext",
+    "/etc/:programa.:cfgext",
+    "/etc/:programa/:file.:cfgext",
+    "/var/:programa/:file.:cfgext"
+  };
+
+bool file_exists (const std::string& name)
+{
+  std::ifstream f(name.c_str());
+  return f.good();
+}
+
+std::string replace(std::string source, std::map<std::string,std::string>strMap, int offset=0, int times=0, bool delimiters=true, std::string before=":", std::string after="")
+{
+  int total = 0;
+  std::string::size_type pos=offset;
+  std::string::size_type newPos;
+  std::string::size_type lowerPos;
+  std::string::size_type delsize;
+
+  if (strMap.size() == 0)
+    return source;
+
+  if (delimiters)
+    delsize = before.length() + after.length();
+
+  do
+    {
+      std::string rep;
+      for (auto i=strMap.begin(); i!=strMap.end(); ++i)
+    {
+      auto fromStr = i->first;
+      newPos = (delimiters)?
+        source.find(before + fromStr + after, pos):
+        source.find(fromStr, pos);
+
+      if ( (i==strMap.begin()) || (newPos<lowerPos) )
+        {
+          rep = fromStr;
+          lowerPos = newPos;
+        }
+    }
+
+      pos = lowerPos;
+      if (pos == std::string::npos)
+    break;
+
+      std::string toStr = strMap[rep];
+      source.replace(pos, rep.length()+((delimiters)?delsize:0), toStr);
+      pos+=toStr.size();
+
+    } while ( (times==0) || (++total<times) );
+
+  return source;
+}
+
+bool findFile(std::string &file, const std::list<std::string>& paths, const std::map<std::string, std::string>& replacements)
+{
+  for (auto p : paths)
+    {
+      p = replace(p, replacements);
+      if (file_exists(p)==1)
+    {
+      file = p;
+      return true;
+    }
+    }
+}
+
+/* Para ver $HOME */
+char *getHomeDir()
+{
+  static char *home = NULL;
+ 
+  if (!home)
+    {
+      home = getenv("HOME") ;
+    }
+  if (!home)
+    {
+      struct passwd *pw = getpwuid(getuid());
+      if (pw)
+    home = pw->pw_dir ;
+    }
+  return home;
+}
+/* Para ver $HOME */
+
+int main(int argc, char *argv[])
+{
+  std::string f;
+  std::map<std::string, std::string> reemplazos =
+    {
+      { "file", "miconfig" },
+      { "cfgext", "xml" },
+      { "programa", "miprograma" },
+      { "home", getHomeDir() }
+    };
+
+  if (findFile(f, stdConfigPaths, reemplazos ))
+    std::cout << "El fichero se encontró en: "<<f<<std::endl;
+  else
+    std::cout << "No se encuentra el fichero "<<std::endl;
+}
+
+En este caso, al llamar a la función findFile(), le pasamos las rutas donde tiene que buscar y los posibles reemplazos dentro de la cadena (para reemplazas subcadenas utilizamos algo parecido a esto), de esta forma, dentro de cada ruta se reemplazarán los elementos que se encuentran en el mapa de cadenas (la primera parte es la cadena a buscar y la segunda la cadena por la que sustituimos). Y, aunque las cadenas a buscar dentro del mapa las introducimos normalmente, cuando las busquemos en cada ruta, las buscaremos con delimitadores, en este caso, «file», vendrá como «:file», por ejemplo.
